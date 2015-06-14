@@ -32,6 +32,7 @@ import java.awt.event.ComponentListener;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
 import java.io.File;
+import java.util.ArrayList;
 
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
@@ -109,37 +110,20 @@ public class BaseViewer {
 	final JButton fitPage = new JButton("Fit to Page");
 
 	final JLabel pageCounter = new JLabel("Page 0 of 0");
-
+	private ArrayList<Float> hitCoOrds = new ArrayList<Float>();
+	private ArrayList<Integer> pages = new ArrayList<Integer>();
 	/**
 	 *
 	 * @param args is of type String[]
 	 */
-	public static void main(final String[] args) {
-
-		final int argLength=args.length;
-
-		/*switch(argLength){
-            case 0:
-                new BaseViewer();
-                break;
-
-            case 1:
-                new BaseViewer(args[0]);
-                break;
-
-            default:
-                System.out.println("You need 0 or 1 parameters");
-                break;
-        }*/
-		//new BaseViewer("csr2014-supplement-en.pdf");
-		new BaseViewer("01.pdf");
-		// new BaseViewer();
+	public static void main(final String[] args) {		
+		//new BaseViewer("01.pdf");
 	}
 
-	public BaseViewer(final String value){
-
-
-
+	public BaseViewer(final String value, ArrayList<Float> hitCoOrds, ArrayList<Integer> pages){
+		this.hitCoOrds = hitCoOrds;
+		this.pages = pages;
+		
 		if(value != null) {
 			try {
 
@@ -473,60 +457,57 @@ public class BaseViewer {
 
 
 		try {
-
 			pageCounter.setText("Page "+currentPage+" of "+pdf.getPageCount());
-			//My edits
-			//Rectangle rectangle = new Rectangle(190,412,100,100);
-			//int [][]rectangle = {{308,361, 100,100}};
-			int [][]rectangle = {{791,598, 50 ,10}};
+			int index = 0;
+			for (int i = 0; i < hitCoOrds.size(); i += 4){
+				
+				int x1 = hitCoOrds.get(i).intValue();
+				int h = hitCoOrds.get(i + 3).intValue() - hitCoOrds.get(i + 1).intValue();
+				int y1 = hitCoOrds.get(i + 1).intValue();
+				int w = hitCoOrds.get(i + 2).intValue() - hitCoOrds.get(i).intValue();
 
-			//pdf.getTextLines().addHighlights(new Rectangle[]{rectangle}, false, currentPage);
-			pdf.getTextLines().addHighlights(rectangle, true, 1);
-			//pdf.repaint();
+				int [][]rectangle = {{x1, y1, w, h}};
+				System.out.print("Highlighting co-ordinates: " + x1 + " " + y1 + " "+ w + " " + h);
+				System.out.println(" on page #" + pages.get(index));
+				pdf.getTextLines().addHighlights(rectangle, true, pages.get(index));
+				index ++;
+				//pdf.repaint();
 
-			final PdfPageData pageData = pdf.getPdfPageData();
-			final int inset=10;
-			final int cw;
-			final int ch;
-			final int rotation=pageData.getRotation(currentPage);
-			if(rotation==90 || rotation==270){
-				cw = pageData.getCropBoxHeight(currentPage);
-				ch = pageData.getCropBoxWidth(currentPage);
-			}else{
-				cw = pageData.getCropBoxWidth(currentPage);
-				ch = pageData.getCropBoxHeight(currentPage);
-			}
+				final PdfPageData pageData = pdf.getPdfPageData();
+				final int inset=10;
+				final int cw;
+				final int ch;
+				final int rotation=pageData.getRotation(currentPage);
+				if(rotation==90 || rotation==270){
+					cw = pageData.getCropBoxHeight(currentPage);
+					ch = pageData.getCropBoxWidth(currentPage);
+				}else{
+					cw = pageData.getCropBoxWidth(currentPage);
+					ch = pageData.getCropBoxHeight(currentPage);
+				}
 
-			//define pdf view width and height
-			final float width = (float) (pdf.getWidth()-inset-inset);
-			final float height = (float) (pdf.getHeight()-inset-inset);
+				//define pdf view width and height
+				final float width = (float) (pdf.getWidth()-inset-inset);
+				final float height = (float) (pdf.getHeight()-inset-inset);
 
-			if((width>0)&&(height>0)){
-				final float x_factor;
-				final float y_factor;
-				x_factor = width / cw;
-				y_factor = height / ch;
+				if((width>0)&&(height>0)){
+					final float x_factor;
+					final float y_factor;
+					x_factor = width / cw;
+					y_factor = height / ch;
 
-				if(x_factor<y_factor) {
-					scale = x_factor;
-				} else {
-					scale = y_factor;
+					if(x_factor<y_factor) {
+						scale = x_factor;
+					} else {
+						scale = y_factor;
+					}
 				}
 			}
-
-
-
-
 			pdf.setPageParameters(scale, currentPage);
-
-
 			pdf.decodePage(currentPage);
 
-
 			//wait to ensure decoded
-			//	pdf.waitForDecodingToFinish();
-
-
+			pdf.waitForDecodingToFinish();
 
 			pdf.invalidate();
 			pdf.updateUI();
